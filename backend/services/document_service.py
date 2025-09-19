@@ -28,9 +28,9 @@ from models.document import Document
 
 class DocumentService:
     def __init__(self):
-        # Set paths relative to project root (parent directory)
-        self.pdf_dir = "../pdf_files"
-        self.metadata_file = "../documents_metadata.json"
+        # Set paths relative to current directory
+        self.pdf_dir = "pdf_files"
+        self.metadata_file = "documents_metadata.json"
         self.google_api_key = 'AIzaSyBAxdH3lyeQ1_giaxyFDZlyNFXwMQSml_Q'
         self.setup_gemini()
         self.ensure_directories()
@@ -100,8 +100,161 @@ class DocumentService:
     
     def _process_pdfs_sync(self):
         """Synchronous PDF processing"""
-        # Implementation of your existing PDF processing logic
-        pass
+        try:
+            if not PyPDF2:
+                logger.error("PyPDF2 not available for text extraction")
+                return
+            
+            if not self.model:
+                logger.error("Gemini AI model not available for summarization")
+                return
+            
+            # Load existing metadata
+            metadata = self._load_metadata()
+            processed_files = []
+            
+            # Get all PDF files in directory
+            pdf_files = []
+            if os.path.exists(self.pdf_dir):
+                for filename in os.listdir(self.pdf_dir):
+                    if filename.lower().endswith('.pdf'):
+                        pdf_files.append(filename)
+            
+            logger.info(f"Found {len(pdf_files)} PDF files to process")
+            
+            for filename in pdf_files:
+                try:
+                    file_path = os.path.join(self.pdf_dir, filename)
+                    
+                    # Check if already processed
+                    doc_id = self._generate_doc_id(filename)
+                    if doc_id in metadata:
+                        logger.info(f"Skipping already processed file: {filename}")
+                        continue
+                    
+                    # Extract text from PDF
+                    text_content = self._extract_pdf_text(file_path)
+                    if not text_content.strip():
+                        logger.warning(f"No text extracted from {filename}")
+                        continue
+                    
+                    # Generate summary using Gemini
+                    summary = self._generate_summary(text_content)
+                    
+                    # Get file statistics
+                    file_size = os.path.getsize(file_path)
+                    page_count = self._get_pdf_page_count(file_path)
+                    
+                    # Create document record
+                    document_data = {
+                        'id': doc_id,
+                        'filename': filename,
+                        'title': self._extract_title(filename),
+                        'author': 'Unknown',
+                        'subject': 'Document',
+                        'summary': summary,
+                        'file_path': file_path,
+                        'created_at': datetime.now().isoformat(),
+                        'processed_at': datetime.now().isoformat(),
+                        'file_size': file_size,
+                        'page_count': page_count
+                    }
+                    
+                    # Add to metadata
+                    metadata[doc_id] = document_data
+                    processed_files.append(filename)
+                    
+                    logger.info(f"Successfully processed: {filename}")
+                    
+                except Exception as e:
+                    logger.error(f"Error processing {filename}: {e}")
+                    continue
+            
+            # Save updated metadata
+            if processed_files:
+                self._save_metadata(metadata)
+                logger.info(f"Processed {len(processed_files)} new documents")
+            else:
+                logger.info("No new documents to process")
+                
+        except Exception as e:
+            logger.error(f"Error in PDF processing: {e}")
+    
+    def _extract_pdf_text(self, file_path: str) -> str:
+        """Extract text content from PDF file"""
+        try:
+            if not PyPDF2:
+                return ""
+                
+            text_content = ""
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                
+                for page_num in range(len(pdf_reader.pages)):
+                    page = pdf_reader.pages[page_num]
+                    text_content += page.extract_text() + "\n"
+            
+            return text_content
+            
+        except Exception as e:
+            logger.error(f"Error extracting text from {file_path}: {e}")
+            return ""
+    
+    def _get_pdf_page_count(self, file_path: str) -> int:
+        """Get number of pages in PDF"""
+        try:
+            if not PyPDF2:
+                return 0
+                
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                return len(pdf_reader.pages)
+        except Exception as e:
+            logger.error(f"Error getting page count for {file_path}: {e}")
+            return 0
+    
+    def _generate_summary(self, text_content: str) -> str:
+        """Generate summary using Google Gemini"""
+        try:
+            if not self.model:
+                return "AI summarization not available."
+                
+            # Truncate text if too long (Gemini has token limits)
+            max_chars = 30000
+            if len(text_content) > max_chars:
+                text_content = text_content[:max_chars] + "..."
+            
+            prompt = f"""
+            Please provide a concise summary of the following document in 2-3 sentences:
+            
+            {text_content}
+            
+            Summary:
+            """
+            
+            response = self.model.generate_content(prompt)
+            summary = response.text.strip()
+            
+            return summary if summary else "No summary could be generated for this document."
+            
+        except Exception as e:
+            logger.error(f"Error generating summary: {e}")
+            return "Error generating summary for this document."
+    
+    def _generate_doc_id(self, filename: str) -> str:
+        """Generate unique document ID based on filename"""
+        # Create hash of filename for consistent ID
+        hash_object = hashlib.md5(filename.encode())
+        return f"doc_{hash_object.hexdigest()[:8]}"
+    
+    def _extract_title(self, filename: str) -> str:
+        """Extract readable title from filename"""
+        # Remove extension and replace underscores/hyphens with spaces
+        title = os.path.splitext(filename)[0]
+        title = title.replace('_', ' ').replace('-', ' ')
+        # Capitalize words
+        title = ' '.join(word.capitalize() for word in title.split())
+        return title
     
     async def get_document_by_id(self, document_id: str) -> Optional[Document]:
         """Get document by ID"""

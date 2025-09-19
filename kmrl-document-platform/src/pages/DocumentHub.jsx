@@ -70,7 +70,7 @@ const DocumentHub = ({ userRole }) => {
   const recentUploads = [
     {
       id: 1,
-      name: 'Safety_Manual_2024.pdf',
+      name: 'Safety_Ma_2024.pdf',
       type: 'Safety Document',
       size: '2.4 MB',
       status: 'processed',

@@ -105,7 +105,7 @@ const Dashboard = ({ userRole }) => {
   const getStatsForRole = (role) => {
     const baseStats = {
       Engineering: {
-        totalDocuments: 2847,
+        totalDocuments: 0,
         pendingReviews: 23,
         recentAlerts: 5,
         completedTasks: 89

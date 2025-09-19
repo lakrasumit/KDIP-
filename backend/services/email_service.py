@@ -116,3 +116,4 @@ class EmailService:
         unique_filename = f"{name}_{timestamp}{ext}"
         
         return os.path.join(self.save_dir, unique_filename)
+        
