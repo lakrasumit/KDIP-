@@ -14,7 +14,12 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  X
+  X,
+  AlertCircle,
+  Flag,
+  Check,
+  ChevronDown,
+  CalendarDays
 } from 'lucide-react';
 
 const Dashboard = ({ userRole }) => {
@@ -143,6 +148,151 @@ const Dashboard = ({ userRole }) => {
       console.error('Error downloading document:', err);
       alert('Failed to download document. Please try again.');
     }
+  };
+
+  // Function to update review status
+  const updateReviewStatus = async (docId, reviewStatus) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${docId}/review`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ review_status: reviewStatus }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update review status');
+      }
+      
+      // Refresh documents list
+      fetchRecentDocuments();
+    } catch (err) {
+      console.error('Error updating review status:', err);
+            alert('Failed to update review status');
+    }
+  };
+
+  // Function to update priority
+  const updatePriority = async (docId, priority) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${docId}/priority`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priority: priority }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update priority');
+      }
+      
+      // Refresh documents list
+      fetchRecentDocuments();
+    } catch (err) {
+      console.error('Error updating priority:', err);
+      alert('Failed to update priority');
+    }
+  };
+
+  // Function to update due date
+  const updateDueDate = async (docId, dueDate) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/${docId}/due-date`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ due_date: dueDate }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update due date');
+      }
+      
+      // Refresh documents list
+      fetchRecentDocuments();
+    } catch (err) {
+      console.error('Error updating due date:', err);
+      alert('Failed to update due date');
+    }
+  };
+
+  // Helper function to get review status color
+  const getReviewStatusColor = (status) => {
+    switch (status) {
+      case 'reviewed': return 'text-green-600 bg-green-100';
+      case 'not reviewed': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  // Helper function to get priority color
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'critical': return 'text-red-600 bg-red-100';
+      case 'urgent': return 'text-yellow-600 bg-yellow-100';
+      case 'normal': return 'text-green-600 bg-green-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  // Helper function to get priority icon
+  const getPriorityIcon = (priority) => {
+    switch (priority) {
+      case 'critical': return AlertTriangle;
+      case 'urgent': return Clock;
+      case 'normal': return CheckCircle;
+      default: return Flag;
+    }
+  };
+
+  // Helper function to format due date
+  const formatDueDate = (dueDateString) => {
+    if (!dueDateString) return null;
+    
+    const dueDate = new Date(dueDateString);
+    const today = new Date();
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const formatOptions = { month: 'short', day: 'numeric' };
+    const formattedDate = dueDate.toLocaleDateString('en-US', formatOptions);
+    
+    if (diffDays < 0) {
+      return { text: `${formattedDate} (Overdue)`, color: 'text-red-600 bg-red-100', urgent: true };
+    } else if (diffDays === 0) {
+      return { text: `${formattedDate} (Today)`, color: 'text-red-600 bg-red-100', urgent: true };
+    } else if (diffDays === 1) {
+      return { text: `${formattedDate} (Tomorrow)`, color: 'text-yellow-600 bg-yellow-100', urgent: true };
+    } else if (diffDays <= 7) {
+      return { text: `${formattedDate} (${diffDays} days)`, color: 'text-yellow-600 bg-yellow-100', urgent: false };
+    } else {
+      return { text: formattedDate, color: 'text-green-600 bg-green-100', urgent: false };
+    }
+  };
+
+  // Helper function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  // Helper function to get suggested due dates
+  const getSuggestedDates = () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(today.getMonth() + 1);
+
+    return [
+      { label: 'Tomorrow', date: tomorrow.toISOString().split('T')[0] },
+      { label: 'Next Week', date: nextWeek.toISOString().split('T')[0] },
+      { label: 'Next Month', date: nextMonth.toISOString().split('T')[0] }
+    ];
   };
 
   // Load documents on component mount
@@ -415,6 +565,132 @@ const Dashboard = ({ userRole }) => {
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
                           {doc.processed_at ? 'Processed' : 'Pending'}
                         </span>
+                        
+                        {/* Review Status */}
+                        <div className="relative group">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getReviewStatusColor(doc.review_status || 'not reviewed')}`}>
+                            {doc.review_status === 'reviewed' ? 'Reviewed' : 'Not Reviewed'}
+                          </span>
+                          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                            <div className="p-2 space-y-1 min-w-32">
+                              <button
+                                onClick={() => updateReviewStatus(doc.id, 'reviewed')}
+                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-green-50 text-green-600"
+                              >
+                                ✓ Reviewed
+                              </button>
+                              <button
+                                onClick={() => updateReviewStatus(doc.id, 'not reviewed')}
+                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-red-50 text-red-600"
+                              >
+                                ✗ Not Reviewed
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Priority */}
+                        <div className="relative group">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer flex items-center space-x-1 ${getPriorityColor(doc.priority || 'normal')}`}>
+                            {React.createElement(getPriorityIcon(doc.priority || 'normal'), { className: 'h-3 w-3' })}
+                            <span className="capitalize">{doc.priority || 'normal'}</span>
+                          </span>
+                          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                            <div className="p-2 space-y-1 min-w-32">
+                              <button
+                                onClick={() => updatePriority(doc.id, 'critical')}
+                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-red-50 text-red-600 flex items-center space-x-2"
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                <span>Critical</span>
+                              </button>
+                              <button
+                                onClick={() => updatePriority(doc.id, 'urgent')}
+                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-yellow-50 text-yellow-600 flex items-center space-x-2"
+                              >
+                                <Clock className="h-3 w-3" />
+                                <span>Urgent</span>
+                              </button>
+                              <button
+                                onClick={() => updatePriority(doc.id, 'normal')}
+                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-green-50 text-green-600 flex items-center space-x-2"
+                              >
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Normal</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Due Date */}
+                        <div className="relative">
+                          {doc.due_date ? (
+                            <div className="relative group">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer flex items-center space-x-1 ${formatDueDate(doc.due_date)?.color}`}>
+                                <CalendarDays className="h-3 w-3" />
+                                <span>{formatDueDate(doc.due_date)?.text}</span>
+                              </span>
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                <div className="p-3 space-y-2 min-w-48">
+                                  <div className="text-xs font-medium text-gray-700 mb-2">Set Due Date</div>
+                                  {getSuggestedDates().map((suggestion) => (
+                                    <button
+                                      key={suggestion.label}
+                                      onClick={() => updateDueDate(doc.id, suggestion.date)}
+                                      className="w-full text-left px-3 py-1 text-sm rounded hover:bg-blue-50 text-blue-600"
+                                    >
+                                      {suggestion.label}
+                                    </button>
+                                  ))}
+                                  <div className="border-t pt-2">
+                                    <input
+                                      type="date"
+                                      min={getTodayDate()}
+                                      onChange={(e) => updateDueDate(doc.id, e.target.value)}
+                                      className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() => updateDueDate(doc.id, null)}
+                                    className="w-full text-left px-3 py-1 text-sm rounded hover:bg-red-50 text-red-600"
+                                  >
+                                    Remove Due Date
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative group">
+                              <button className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center space-x-1">
+                                <CalendarDays className="h-3 w-3" />
+                                <span>Set Due Date</span>
+                              </button>
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                <div className="p-3 space-y-2 min-w-48">
+                                  <div className="text-xs font-medium text-gray-700 mb-2">Set Due Date</div>
+                                  {getSuggestedDates().map((suggestion) => (
+                                    <button
+                                      key={suggestion.label}
+                                      onClick={() => updateDueDate(doc.id, suggestion.date)}
+                                      className="w-full text-left px-3 py-1 text-sm rounded hover:bg-blue-50 text-blue-600"
+                                    >
+                                      {suggestion.label}
+                                    </button>
+                                  ))}
+                                  <div className="border-t pt-2">
+                                    <input
+                                      type="date"
+                                      min={getTodayDate()}
+                                      onChange={(e) => updateDueDate(doc.id, e.target.value)}
+                                      className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
                         <button 
                           onClick={() => handleViewDocument(doc)}
                           className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -514,8 +790,7 @@ const Dashboard = ({ userRole }) => {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
-                    <p className="text-gray-900">{selectedDocument.author || 'Unknown'}</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Author </label>                    <p className="text-gray-900">{selectedDocument.author || 'Unknown'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
@@ -556,17 +831,36 @@ const Dashboard = ({ userRole }) => {
                   <p className="text-gray-900 font-mono text-sm bg-gray-50 p-2 rounded">{selectedDocument.filename}</p>
                 </div>
                 
-                {/* Summary Section */}
-                {selectedDocument.summary && (
+                {/* Status, Priority, and Due Date Section in Modal */}
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">AI Generated Summary</label>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-gray-800 leading-relaxed">{selectedDocument.summary}</p>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Review Status</label>
+                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getReviewStatusColor(selectedDocument.review_status || 'not reviewed')}`}>
+                      {selectedDocument.review_status === 'reviewed' ? 'Reviewed' : 'Not Reviewed'}
+                    </span>
                   </div>
-                )}
-                
-                {/* Status Badge */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority Level</label>
+                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium items-center space-x-1 ${getPriorityColor(selectedDocument.priority || 'normal')}`}>
+                      {React.createElement(getPriorityIcon(selectedDocument.priority || 'normal'), { className: 'h-3 w-3' })}
+                      <span className="capitalize">{selectedDocument.priority || 'normal'}</span>
+                    </span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                    {selectedDocument.due_date ? (
+                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium items-center space-x-1 ${formatDueDate(selectedDocument.due_date)?.color}`}>
+                        <CalendarDays className="h-3 w-3" />
+                        <span>{formatDueDate(selectedDocument.due_date)?.text}</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                        No due date set
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Processing Status</label>
                   <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
@@ -577,6 +871,16 @@ const Dashboard = ({ userRole }) => {
                     {selectedDocument.processed_at ? 'Processed' : 'Pending Processing'}
                   </span>
                 </div>
+                
+                {/* Summary Section */}
+                {selectedDocument.summary && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">AI Generated Summary</label>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-gray-800 leading-relaxed">{selectedDocument.summary}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
