@@ -111,6 +111,40 @@ const Dashboard = ({ userRole }) => {
     setSelectedDocument(null);
   };
 
+  // Function to handle file download
+  const handleDownloadDocument = async (doc) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/download/${doc.filename}`, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+      
+      // Create blob from response
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.filename;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      alert('Failed to download document. Please try again.');
+    }
+  };
+
   // Load documents on component mount
   useEffect(() => {
     fetchRecentDocuments();
@@ -388,8 +422,12 @@ const Dashboard = ({ userRole }) => {
                         >
                           <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                         </button>
-                        <button className="p-1 hover:bg-gray-100 rounded">
-                          <Download className="h-4 w-4 text-gray-400" />
+                        <button 
+                          onClick={() => handleDownloadDocument(doc)}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          title="Download Document"
+                        >
+                          <Download className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                         </button>
                       </div>
                     </div>
@@ -550,7 +588,10 @@ const Dashboard = ({ userRole }) => {
               >
                 Close
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button 
+                onClick={() => handleDownloadDocument(selectedDocument)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
                 <Download className="h-4 w-4" />
                 <span>Download</span>
               </button>
