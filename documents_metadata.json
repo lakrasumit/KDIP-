@@ -1,0 +1,41 @@
+{
+  "doc_001": {
+    "id": "doc_001",
+    "filename": "safety_guidelines_2024.pdf",
+    "title": "Metro Rail Safety Guidelines 2024",
+    "author": "KMRL Safety Department",
+    "subject": "Safety Guidelines Update",
+    "summary": "Comprehensive safety guidelines for metro rail operations including new emergency procedures, passenger safety protocols, and staff training requirements. This document covers updated safety measures in response to recent regulatory changes and best practices from other metro systems.",
+    "file_path": "../pdf_files/safety_guidelines_2024.pdf",
+    "created_at": "2024-01-15T10:30:00.000000",
+    "processed_at": "2024-01-15T10:35:00.000000",
+    "file_size": 2048576,
+    "page_count": 45
+  },
+  "doc_002": {
+    "id": "doc_002",
+    "filename": "maintenance_schedule_q1.pdf",
+    "title": "Q1 2024 Maintenance Schedule",
+    "author": "KMRL Engineering",
+    "subject": "Quarterly Maintenance",
+    "summary": "Detailed maintenance schedule for the first quarter of 2024, including rolling stock maintenance, infrastructure checks, and system upgrades. The schedule ensures minimal service disruption while maintaining operational safety and efficiency.",
+    "file_path": "../pdf_files/maintenance_schedule_q1.pdf",
+    "created_at": "2024-01-12T14:20:00.000000",
+    "processed_at": "2024-01-12T14:25:00.000000",
+    "file_size": 1536000,
+    "page_count": 32
+  },
+  "doc_003": {
+    "id": "doc_003",
+    "filename": "budget_proposal_2024.pdf",
+    "title": "Annual Budget Proposal 2024",
+    "author": "KMRL Finance",
+    "subject": "Budget Planning",
+    "summary": "Comprehensive budget proposal for fiscal year 2024 covering operational expenses, capital investments, and revenue projections. Includes allocation for new projects, technology upgrades, and infrastructure expansion plans.",
+    "file_path": "../pdf_files/budget_proposal_2024.pdf",
+    "created_at": "2024-01-10T09:15:00.000000",
+    "processed_at": "2024-01-10T09:20:00.000000",
+    "file_size": 3072000,
+    "page_count": 78
+  }
+}
