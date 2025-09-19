@@ -157,7 +157,10 @@ class DocumentService:
                         'created_at': datetime.now().isoformat(),
                         'processed_at': datetime.now().isoformat(),
                         'file_size': file_size,
-                        'page_count': page_count
+                        'page_count': page_count,
+                        'review_status': 'not reviewed',
+                        'priority': 'normal',
+                        'due_date': None
                     }
                     
                     # Add to metadata

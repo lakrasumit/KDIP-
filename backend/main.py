@@ -71,7 +71,7 @@ def check_emails():
             # Run email checking in background thread
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            loop.run_until_complete(email_service.check_and_download_pdfs())
+            loop.run_until_complete(email_service.check_and_download_emails())
             loop.close()
         
         # Start background thread
@@ -166,13 +166,16 @@ def upload_document():
         if file.filename == '':
             return jsonify({"error": "No file selected"}), 400
             
-        if not file.filename.lower().endswith('.pdf'):
+        if not file.filename or not file.filename.lower().endswith('.pdf'):
             return jsonify({"error": "Only PDF files are allowed"}), 400
         
         # Save file to pdf_files directory
         pdf_files_dir = os.path.join(os.getcwd(), 'pdf_files')
         if not os.path.exists(pdf_files_dir):
             os.makedirs(pdf_files_dir)
+            
+        if not file.filename:
+            return jsonify({"error": "No file selected"}), 400
             
         file_path = os.path.join(pdf_files_dir, file.filename)
         file.save(file_path)
@@ -230,7 +233,13 @@ def get_stats():
                 "total_documents": 0,
                 "processed_documents": 0,
                 "pending_documents": 0,
-                "total_size": 0
+                "total_size": 0,
+                "pending_reviews": 0,
+                "reviewed_documents": 0,
+                "critical_priority": 0,
+                "urgent_priority": 0,
+                "overdue_documents": 0,
+                "due_today": 0
             })
             
         with open(metadata_file, 'r', encoding='utf-8') as f:
@@ -241,12 +250,128 @@ def get_stats():
         pending_documents = total_documents - processed_documents
         total_size = sum(doc.get('file_size', 0) for doc in metadata.values())
         
+        # Review statistics
+        pending_reviews = sum(1 for doc in metadata.values() if doc.get('review_status', 'not reviewed') == 'not reviewed')
+        reviewed_documents = sum(1 for doc in metadata.values() if doc.get('review_status', 'not reviewed') == 'reviewed')
+        
+        # Priority statistics
+        critical_priority = sum(1 for doc in metadata.values() if doc.get('priority', 'normal') == 'critical')
+        urgent_priority = sum(1 for doc in metadata.values() if doc.get('priority', 'normal') == 'urgent')
+        
+        # Due date statistics
+        today = datetime.now().date()
+        overdue_documents = 0
+        due_today = 0
+        
+        for doc in metadata.values():
+            due_date_str = doc.get('due_date')
+            if due_date_str:
+                try:
+                    due_date = datetime.fromisoformat(due_date_str).date()
+                    if due_date < today:
+                        overdue_documents += 1
+                    elif due_date == today:
+                        due_today += 1
+                except ValueError:
+                    continue
+        
         return jsonify({
             "total_documents": total_documents,
             "processed_documents": processed_documents,
             "pending_documents": pending_documents,
-            "total_size": total_size
+            "total_size": total_size,
+            "pending_reviews": pending_reviews,
+            "reviewed_documents": reviewed_documents,
+            "critical_priority": critical_priority,
+            "urgent_priority": urgent_priority,
+            "overdue_documents": overdue_documents,
+            "due_today": due_today
         })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/alerts", methods=["GET"])
+def get_alerts():
+    """Get recent alerts based on document status"""
+    try:
+        # Load metadata
+        metadata_file = "documents_metadata.json"
+        if not os.path.exists(metadata_file):
+            return jsonify([])
+            
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        
+        alerts = []
+        today = datetime.now().date()
+        
+        # Check for overdue documents
+        overdue_count = 0
+        due_today_count = 0
+        critical_unreviewed = 0
+        
+        for doc in metadata.values():
+            # Due date alerts
+            due_date_str = doc.get('due_date')
+            if due_date_str:
+                try:
+                    due_date = datetime.fromisoformat(due_date_str).date()
+                    if due_date < today:
+                        overdue_count += 1
+                    elif due_date == today:
+                        due_today_count += 1
+                except ValueError:
+                    continue
+            
+            # Critical priority unreviewed documents
+            if (doc.get('priority', 'normal') == 'critical' and 
+                doc.get('review_status', 'not reviewed') == 'not reviewed'):
+                critical_unreviewed += 1
+        
+        # Generate alerts
+        if overdue_count > 0:
+            alerts.append({
+                "id": 1,
+                "title": "Overdue Documents",
+                "message": f"{overdue_count} document(s) are past their due date",
+                "type": "error",
+                "time": "Now",
+                "count": overdue_count
+            })
+        
+        if due_today_count > 0:
+            alerts.append({
+                "id": 2,
+                "title": "Due Today",
+                "message": f"{due_today_count} document(s) are due today",
+                "type": "warning",
+                "time": "Today",
+                "count": due_today_count
+            })
+        
+        if critical_unreviewed > 0:
+            alerts.append({
+                "id": 3,
+                "title": "Critical Documents Pending Review",
+                "message": f"{critical_unreviewed} critical priority document(s) need review",
+                "type": "warning",
+                "time": "Pending",
+                "count": critical_unreviewed
+            })
+        
+        # Add general info alerts if no urgent alerts
+        if len(alerts) == 0:
+            alerts.append({
+                "id": 4,
+                "title": "All Documents Up to Date",
+                "message": "No urgent actions required at this time",
+                "type": "info",
+                "time": "Current status",
+                "count": 0
+            })
+        
+        return jsonify(alerts)
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -14,12 +14,7 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  X,
-  AlertCircle,
-  Flag,
-  Check,
-  ChevronDown,
-  CalendarDays
+  X
 } from 'lucide-react';
 
 const Dashboard = ({ userRole }) => {
@@ -31,6 +26,13 @@ const Dashboard = ({ userRole }) => {
   const [processingDocs, setProcessingDocs] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [stats, setStats] = useState({
+    total_documents: 0,
+    pending_reviews: 0,
+    overdue_documents: 0,
+    due_today: 0
+  });
+  const [alerts, setAlerts] = useState([]);
 
   // Backend API base URL
   const API_BASE_URL = 'http://localhost:8000/api';
@@ -53,6 +55,38 @@ const Dashboard = ({ userRole }) => {
       setError('Failed to load recent documents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch statistics from backend
+  const fetchStats = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/stats`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      
+      const statsData = await response.json();
+      setStats(statsData);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  // Fetch alerts from backend
+  const fetchAlerts = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/alerts`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch alerts');
+      }
+      
+      const alertsData = await response.json();
+      setAlerts(alertsData);
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
     }
   };
 
@@ -165,11 +199,11 @@ const Dashboard = ({ userRole }) => {
         throw new Error('Failed to update review status');
       }
       
-      // Refresh documents list
-      fetchRecentDocuments();
+      // Refresh all data
+      refreshAllData();
     } catch (err) {
       console.error('Error updating review status:', err);
-            alert('Failed to update review status');
+      alert('Failed to update review status');
     }
   };
 
@@ -188,8 +222,8 @@ const Dashboard = ({ userRole }) => {
         throw new Error('Failed to update priority');
       }
       
-      // Refresh documents list
-      fetchRecentDocuments();
+      // Refresh all data
+      refreshAllData();
     } catch (err) {
       console.error('Error updating priority:', err);
       alert('Failed to update priority');
@@ -211,8 +245,8 @@ const Dashboard = ({ userRole }) => {
         throw new Error('Failed to update due date');
       }
       
-      // Refresh documents list
-      fetchRecentDocuments();
+      // Refresh all data
+      refreshAllData();
     } catch (err) {
       console.error('Error updating due date:', err);
       alert('Failed to update due date');
@@ -298,71 +332,16 @@ const Dashboard = ({ userRole }) => {
   // Load documents on component mount
   useEffect(() => {
     fetchRecentDocuments();
+    fetchStats();
+    fetchAlerts();
   }, []);
 
-  // Mock data - in a real application, this would come from an API
-  const getStatsForRole = (role) => {
-    const baseStats = {
-      Engineering: {
-        totalDocuments: 0,
-        pendingReviews: 23,
-        recentAlerts: 5,
-        completedTasks: 89
-      },
-      Operations: {
-        totalDocuments: 1923,
-        pendingReviews: 12,
-        recentAlerts: 3,
-        completedTasks: 156
-      },
-      Finance: {
-        totalDocuments: 3421,
-        pendingReviews: 31,
-        recentAlerts: 8,
-        completedTasks: 203
-      },
-      HR: {
-        totalDocuments: 1654,
-        pendingReviews: 18,
-        recentAlerts: 2,
-        completedTasks: 134
-      },
-      Management: {
-        totalDocuments: 5847,
-        pendingReviews: 45,
-        recentAlerts: 12,
-        completedTasks: 78
-      }
-    };
-    return baseStats[role] || baseStats.Management;
+  // Refresh all data after document updates
+  const refreshAllData = () => {
+    fetchRecentDocuments();
+    fetchStats();
+    fetchAlerts();
   };
-
-  const stats = getStatsForRole(userRole);
-
-  // Mock alerts data - can be replaced with API call later
-  const alerts = [
-    {
-      id: 1,
-      title: 'Regulatory Deadline Approaching',
-      message: 'Metro Rail Safety audit documents due in 5 days',
-      type: 'warning',
-      time: '2 hours ago'
-    },
-    {
-      id: 2,
-      title: 'New Document Available',
-      message: 'Updated operational procedures have been uploaded',
-      type: 'info',
-      time: '4 hours ago'
-    },
-    {
-      id: 3,
-      title: 'Compliance Review Required',
-      message: 'Monthly safety review documents need approval',
-      type: 'warning',
-      time: '1 day ago'
-    }
-  ];
 
   return (
     <div className="space-y-6">
@@ -427,7 +406,7 @@ const Dashboard = ({ userRole }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Documents</p>
-              <p className="text-2xl font-bold text-gray-900">{recentDocuments.length}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total_documents || 0}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <FileText className="h-6 w-6 text-blue-600" />
@@ -443,7 +422,7 @@ const Dashboard = ({ userRole }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Pending Reviews</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pendingReviews}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.pending_reviews || 0}</p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
               <Clock className="h-6 w-6 text-yellow-600" />
@@ -457,8 +436,8 @@ const Dashboard = ({ userRole }) => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Recent Alerts</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.recentAlerts}</p>
+              <p className="text-sm font-medium text-gray-600">Overdue Documents</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.overdue_documents || 0}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
               <AlertTriangle className="h-6 w-6 text-red-600" />
@@ -472,15 +451,15 @@ const Dashboard = ({ userRole }) => {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Completed Tasks</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.completedTasks}</p>
+              <p className="text-sm font-medium text-gray-600">Due Today</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.due_today || 0}</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
               <CheckCircle className="h-6 w-6 text-green-600" />
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-green-600">This month</span>
+            <span className="text-green-600">Today's deadline</span>
           </div>
         </div>
       </div>
@@ -565,132 +544,6 @@ const Dashboard = ({ userRole }) => {
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
                           {doc.processed_at ? 'Processed' : 'Pending'}
                         </span>
-                        
-                        {/* Review Status */}
-                        <div className="relative group">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer ${getReviewStatusColor(doc.review_status || 'not reviewed')}`}>
-                            {doc.review_status === 'reviewed' ? 'Reviewed' : 'Not Reviewed'}
-                          </span>
-                          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                            <div className="p-2 space-y-1 min-w-32">
-                              <button
-                                onClick={() => updateReviewStatus(doc.id, 'reviewed')}
-                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-green-50 text-green-600"
-                              >
-                                ✓ Reviewed
-                              </button>
-                              <button
-                                onClick={() => updateReviewStatus(doc.id, 'not reviewed')}
-                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-red-50 text-red-600"
-                              >
-                                ✗ Not Reviewed
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Priority */}
-                        <div className="relative group">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer flex items-center space-x-1 ${getPriorityColor(doc.priority || 'normal')}`}>
-                            {React.createElement(getPriorityIcon(doc.priority || 'normal'), { className: 'h-3 w-3' })}
-                            <span className="capitalize">{doc.priority || 'normal'}</span>
-                          </span>
-                          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                            <div className="p-2 space-y-1 min-w-32">
-                              <button
-                                onClick={() => updatePriority(doc.id, 'critical')}
-                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-red-50 text-red-600 flex items-center space-x-2"
-                              >
-                                <AlertTriangle className="h-3 w-3" />
-                                <span>Critical</span>
-                              </button>
-                              <button
-                                onClick={() => updatePriority(doc.id, 'urgent')}
-                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-yellow-50 text-yellow-600 flex items-center space-x-2"
-                              >
-                                <Clock className="h-3 w-3" />
-                                <span>Urgent</span>
-                              </button>
-                              <button
-                                onClick={() => updatePriority(doc.id, 'normal')}
-                                className="w-full text-left px-3 py-1 text-sm rounded hover:bg-green-50 text-green-600 flex items-center space-x-2"
-                              >
-                                <CheckCircle className="h-3 w-3" />
-                                <span>Normal</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Due Date */}
-                        <div className="relative">
-                          {doc.due_date ? (
-                            <div className="relative group">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium cursor-pointer flex items-center space-x-1 ${formatDueDate(doc.due_date)?.color}`}>
-                                <CalendarDays className="h-3 w-3" />
-                                <span>{formatDueDate(doc.due_date)?.text}</span>
-                              </span>
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                                <div className="p-3 space-y-2 min-w-48">
-                                  <div className="text-xs font-medium text-gray-700 mb-2">Set Due Date</div>
-                                  {getSuggestedDates().map((suggestion) => (
-                                    <button
-                                      key={suggestion.label}
-                                      onClick={() => updateDueDate(doc.id, suggestion.date)}
-                                      className="w-full text-left px-3 py-1 text-sm rounded hover:bg-blue-50 text-blue-600"
-                                    >
-                                      {suggestion.label}
-                                    </button>
-                                  ))}
-                                  <div className="border-t pt-2">
-                                    <input
-                                      type="date"
-                                      min={getTodayDate()}
-                                      onChange={(e) => updateDueDate(doc.id, e.target.value)}
-                                      className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                  </div>
-                                  <button
-                                    onClick={() => updateDueDate(doc.id, null)}
-                                    className="w-full text-left px-3 py-1 text-sm rounded hover:bg-red-50 text-red-600"
-                                  >
-                                    Remove Due Date
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="relative group">
-                              <button className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center space-x-1">
-                                <CalendarDays className="h-3 w-3" />
-                                <span>Set Due Date</span>
-                              </button>
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                                <div className="p-3 space-y-2 min-w-48">
-                                  <div className="text-xs font-medium text-gray-700 mb-2">Set Due Date</div>
-                                  {getSuggestedDates().map((suggestion) => (
-                                    <button
-                                      key={suggestion.label}
-                                      onClick={() => updateDueDate(doc.id, suggestion.date)}
-                                      className="w-full text-left px-3 py-1 text-sm rounded hover:bg-blue-50 text-blue-600"
-                                    >
-                                      {suggestion.label}
-                                    </button>
-                                  ))}
-                                  <div className="border-t pt-2">
-                                    <input
-                                      type="date"
-                                      min={getTodayDate()}
-                                      onChange={(e) => updateDueDate(doc.id, e.target.value)}
-                                      className="w-full px-3 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
                         <button 
                           onClick={() => handleViewDocument(doc)}
                           className="p-1 hover:bg-gray-100 rounded transition-colors"
@@ -790,7 +643,8 @@ const Dashboard = ({ userRole }) => {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Author </label>                    <p className="text-gray-900">{selectedDocument.author || 'Unknown'}</p>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                    <p className="text-gray-900">{selectedDocument.author || 'Unknown'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
@@ -831,36 +685,17 @@ const Dashboard = ({ userRole }) => {
                   <p className="text-gray-900 font-mono text-sm bg-gray-50 p-2 rounded">{selectedDocument.filename}</p>
                 </div>
                 
-                {/* Status, Priority, and Due Date Section in Modal */}
-                <div className="grid grid-cols-3 gap-4">
+                {/* Summary Section */}
+                {selectedDocument.summary && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Review Status</label>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${getReviewStatusColor(selectedDocument.review_status || 'not reviewed')}`}>
-                      {selectedDocument.review_status === 'reviewed' ? 'Reviewed' : 'Not Reviewed'}
-                    </span>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">AI Generated Summary</label>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-gray-800 leading-relaxed">{selectedDocument.summary}</p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority Level</label>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium items-center space-x-1 ${getPriorityColor(selectedDocument.priority || 'normal')}`}>
-                      {React.createElement(getPriorityIcon(selectedDocument.priority || 'normal'), { className: 'h-3 w-3' })}
-                      <span className="capitalize">{selectedDocument.priority || 'normal'}</span>
-                    </span>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-                    {selectedDocument.due_date ? (
-                      <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium items-center space-x-1 ${formatDueDate(selectedDocument.due_date)?.color}`}>
-                        <CalendarDays className="h-3 w-3" />
-                        <span>{formatDueDate(selectedDocument.due_date)?.text}</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-                        No due date set
-                      </span>
-                    )}
-                  </div>
-                </div>
-
+                )}
+                
+                {/* Status Badge */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Processing Status</label>
                   <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
@@ -871,16 +706,6 @@ const Dashboard = ({ userRole }) => {
                     {selectedDocument.processed_at ? 'Processed' : 'Pending Processing'}
                   </span>
                 </div>
-                
-                {/* Summary Section */}
-                {selectedDocument.summary && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">AI Generated Summary</label>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-gray-800 leading-relaxed">{selectedDocument.summary}</p>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             

@@ -7,7 +7,8 @@ class Document:
                  title: Optional[str] = None, author: Optional[str] = None, 
                  subject: Optional[str] = None, summary: Optional[str] = None,
                  processed_at: Optional[Union[datetime, str]] = None, file_size: Optional[int] = None,
-                 page_count: Optional[int] = None):
+                 page_count: Optional[int] = None, review_status: Optional[str] = "not reviewed",
+                 priority: Optional[str] = "normal", due_date: Optional[str] = None):
         self.id = id
         self.filename = filename
         self.title = title
@@ -29,6 +30,9 @@ class Document:
             
         self.file_size = file_size
         self.page_count = page_count
+        self.review_status = review_status
+        self.priority = priority
+        self.due_date = due_date
     
     def to_dict(self):
         return {
@@ -42,7 +46,10 @@ class Document:
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'processed_at': self.processed_at.isoformat() if self.processed_at else None,
             'file_size': self.file_size,
-            'page_count': self.page_count
+            'page_count': self.page_count,
+            'review_status': self.review_status,
+            'priority': self.priority,
+            'due_date': self.due_date
         }
 
 class DocumentSchema(Schema):
@@ -57,6 +64,9 @@ class DocumentSchema(Schema):
     processed_at = fields.DateTime(allow_none=True)
     file_size = fields.Int(allow_none=True)
     page_count = fields.Int(allow_none=True)
+    review_status = fields.Str(allow_none=True)
+    priority = fields.Str(allow_none=True)
+    due_date = fields.Str(allow_none=True)
 
 class DocumentCreateSchema(Schema):
     filename = fields.Str(required=True)

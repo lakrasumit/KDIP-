@@ -10,7 +10,10 @@
     "created_at": "2025-09-19T17:16:14.556309",
     "processed_at": "2025-09-19T17:16:14.556309",
     "file_size": 766544,
-    "page_count": 9
+    "page_count": 9,
+    "review_status": "not reviewed",
+    "priority": "normal",
+    "due_date": null
   },
   "doc_29f6164d": {
     "id": "doc_29f6164d",
@@ -23,6 +26,25 @@
     "created_at": "2025-09-19T17:19:17.166917",
     "processed_at": "2025-09-19T17:19:17.166917",
     "file_size": 766544,
-    "page_count": 9
+    "page_count": 9,
+    "review_status": "not reviewed",
+    "priority": "urgent",
+    "due_date": "2025-09-21"
+  },
+  "doc_30275a9a": {
+    "id": "doc_30275a9a",
+    "filename": "24BCS10429_Sumit_Lakra_606-A.pdf",
+    "title": "24bcs10429 Sumit Lakra 606 A",
+    "author": "Unknown",
+    "subject": "Document",
+    "summary": "Sumit Lakra is a computer science student with a passion for AI, possessing strong problem-solving skills and experience in data scraping, machine learning (using PyTorch), and competitive programming (320+ LeetCode problems).  His projects include an AI-powered document summarization dashboard built using a range of technologies including Python, React.js, and Flask. He seeks to contribute to AI research and development.",
+    "file_path": "pdf_files\\24BCS10429_Sumit_Lakra_606-A.pdf",
+    "created_at": "2025-09-19T20:58:02.633265",
+    "processed_at": "2025-09-19T20:58:02.633265",
+    "file_size": 224670,
+    "page_count": 1,
+    "review_status": "not reviewed",
+    "priority": "normal",
+    "due_date": null
   }
 }
