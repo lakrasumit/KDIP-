@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Upload,
   FileText,
@@ -14,13 +14,83 @@ import {
   Camera,
   Scan,
   Languages,
-  Download
+  Download,
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 
 const DocumentHub = ({ userRole }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [activeTab, setActiveTab] = useState('upload');
+  const [recentDocuments, setRecentDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Backend API base URL
+  const API_BASE_URL = 'http://localhost:8000/api';
+
+  // Fetch recent documents from backend
+  const fetchRecentDocuments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/documents/recent`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+      
+      const documents = await response.json();
+      setRecentDocuments(documents);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+      setError('Failed to load recent documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to handle file download
+  const handleDownloadDocument = async (doc) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/download/${doc.filename}`, {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+      
+      // Create blob from response
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.filename;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err) {
+      console.error('Error downloading document:', err);
+      alert('Failed to download document. Please try again.');
+    }
+  };
+
+  // Load documents when Recent Processing tab is active
+  useEffect(() => {
+    if (activeTab === 'recent') {
+      fetchRecentDocuments();
+    }
+  }, [activeTab]);
 
   const uploadSources = [
     {
@@ -67,38 +137,36 @@ const DocumentHub = ({ userRole }) => {
     }
   ];
 
-  const recentUploads = [
-    {
-      id: 1,
-      name: 'Safety_Ma_2024.pdf',
-      type: 'Safety Document',
-      size: '2.4 MB',
-      status: 'processed',
-      language: 'English',
-      timestamp: '2 hours ago',
-      summary: 'Updated safety protocols for metro operations including emergency procedures and staff guidelines.'
-    },
-    {
-      id: 2,
-      name: 'Vendor_Invoice_ABC_Corp.pdf',
-      type: 'Financial Document',
-      size: '856 KB',
-      status: 'processing',
-      language: 'English',
-      timestamp: '4 hours ago',
-      summary: 'Invoice for electrical equipment maintenance services...'
-    },
-    {
-      id: 3,
-      name: 'രക്ഷാപ്രവർത്തന_നിർദ്ദേശങ്ങൾ.pdf',
-      type: 'Safety Circular',
-      size: '1.2 MB',
-      status: 'processed',
-      language: 'Malayalam',
-      timestamp: '1 day ago',
-      summary: 'Emergency response procedures in Malayalam for local staff training and reference.'
+  // Helper function to format file size
+  const formatFileSize = (bytes) => {
+    if (!bytes) return 'Unknown';
+    return (bytes / 1024).toFixed(2) + ' KB';
+  };
+
+  // Helper function to get document type from filename
+  const getDocumentType = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    switch (ext) {
+      case 'pdf': return 'PDF Document';
+      case 'doc':
+      case 'docx': return 'Word Document';
+      case 'xls':
+      case 'xlsx': return 'Excel Document';
+      default: return 'Document';
     }
-  ];
+  };
+
+  // Helper function to format timestamp
+  const formatTimestamp = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffHours = Math.floor((now - date) / (1000 * 60 * 60));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffHours < 48) return '1 day ago';
+    return `${Math.floor(diffHours / 24)} days ago`;
+  };
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -319,50 +387,112 @@ const DocumentHub = ({ userRole }) => {
       {activeTab === 'recent' && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">Recently Processed Documents</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Recently Processed Documents</h3>
+              <button 
+                onClick={fetchRecentDocuments}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={loading}
+              >
+                <RefreshCw className={`h-4 w-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
-          <div className="divide-y divide-gray-200">
-            {recentUploads.map((doc) => {
-              const StatusIcon = getStatusIcon(doc.status);
-              return (
-                <div key={doc.id} className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3">
-                      <StatusIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                      <div className="flex-1">
-                        <h4 className="text-sm font-medium text-gray-900">{doc.name}</h4>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                          <span>{doc.type}</span>
-                          <span>•</span>
-                          <span>{doc.size}</span>
-                          <span>•</span>
-                          <span className="flex items-center">
-                            <Languages className="h-3 w-3 mr-1" />
-                            {doc.language}
-                          </span>
-                          <span>•</span>
-                          <span>{doc.timestamp}</span>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="p-8 text-center">
+              <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-600">Loading processed documents...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="p-8 text-center">
+              <AlertCircle className="h-8 w-8 text-red-400 mx-auto mb-4" />
+              <p className="text-red-600 mb-4">{error}</p>
+              <button 
+                onClick={fetchRecentDocuments}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Documents List */}
+          {!loading && !error && (
+            <div className="divide-y divide-gray-200">
+              {recentDocuments.length === 0 ? (
+                <div className="p-8 text-center">
+                  <FileText className="h-8 w-8 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">No processed documents found</p>
+                  <p className="text-sm text-gray-500">
+                    Documents will appear here after they are processed.
+                  </p>
+                </div>
+              ) : (
+                recentDocuments.map((doc) => {
+                  const StatusIcon = doc.processed_at ? CheckCircle : AlertCircle;
+                  const status = doc.processed_at ? 'processed' : 'pending';
+                  
+                  return (
+                    <div key={doc.id} className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-3">
+                          <StatusIcon className={`h-5 w-5 mt-0.5 ${doc.processed_at ? 'text-green-500' : 'text-yellow-500'}`} />
+                          <div className="flex-1">
+                            <h4 className="text-sm font-medium text-gray-900">{doc.title || doc.filename}</h4>
+                            <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
+                              <span>{getDocumentType(doc.filename)}</span>
+                              <span>•</span>
+                              <span>{formatFileSize(doc.file_size)}</span>
+                              <span>•</span>
+                              <span className="flex items-center">
+                                <Languages className="h-3 w-3 mr-1" />
+                                English
+                              </span>
+                              <span>•</span>
+                              <span>{formatTimestamp(doc.created_at)}</span>
+                              {doc.page_count && (
+                                <>
+                                  <span>•</span>
+                                  <span>{doc.page_count} pages</span>
+                                </>
+                              )}
+                            </div>
+                            {doc.summary && (
+                              <p className="text-sm text-gray-600 mt-2 max-w-2xl">
+                                <strong>AI Summary:</strong> {doc.summary.substring(0, 200)}
+                                {doc.summary.length > 200 && '...'}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        {doc.summary && (
-                          <p className="text-sm text-gray-600 mt-2 max-w-2xl">
-                            <strong>AI Summary:</strong> {doc.summary}
-                          </p>
-                        )}
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            status === 'processed' 
+                              ? 'text-green-600 bg-green-100' 
+                              : 'text-yellow-600 bg-yellow-100'
+                          }`}>
+                            {status === 'processed' ? 'Processed' : 'Processing'}
+                          </span>
+                          <button 
+                            onClick={() => handleDownloadDocument(doc)}
+                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            title="Download Document"
+                          >
+                            <Download className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(doc.status)}`}>
-                        {doc.status}
-                      </span>
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <Download className="h-4 w-4 text-gray-400" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       )}
 
