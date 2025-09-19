@@ -13,7 +13,8 @@ import {
   Users,
   CheckCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 
 const Dashboard = ({ userRole }) => {
@@ -23,6 +24,8 @@ const Dashboard = ({ userRole }) => {
   const [error, setError] = useState(null);
   const [processingEmails, setProcessingEmails] = useState(false);
   const [processingDocs, setProcessingDocs] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
 
   // Backend API base URL
   const API_BASE_URL = 'http://localhost:8000/api';
@@ -96,6 +99,18 @@ const Dashboard = ({ userRole }) => {
     }
   };
 
+  // Function to handle view document
+  const handleViewDocument = (doc) => {
+    setSelectedDocument(doc);
+    setShowDocumentModal(true);
+  };
+
+  // Function to close modal
+  const closeModal = () => {
+    setShowDocumentModal(false);
+    setSelectedDocument(null);
+  };
+
   // Load documents on component mount
   useEffect(() => {
     fetchRecentDocuments();
@@ -151,56 +166,40 @@ const Dashboard = ({ userRole }) => {
     },
     {
       id: 2,
-      title: 'New Safety Circular',
-      message: 'Updated emergency procedures from CMRS',
+      title: 'New Document Available',
+      message: 'Updated operational procedures have been uploaded',
       type: 'info',
       time: '4 hours ago'
     },
     {
       id: 3,
-      title: 'Contract Renewal Alert',
-      message: 'Cleaning services contract expires next month',
+      title: 'Compliance Review Required',
+      message: 'Monthly safety review documents need approval',
       type: 'warning',
       time: '1 day ago'
     }
   ];
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'approved': return 'text-green-600 bg-green-100';
-      case 'pending': return 'text-yellow-600 bg-yellow-100';
-      case 'processing': return 'text-blue-600 bg-blue-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high': return 'border-l-red-500';
-      case 'medium': return 'border-l-yellow-500';
-      case 'low': return 'border-l-green-500';
-      default: return 'border-l-gray-500';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome back! Here's what's happening in your department.</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {userRole === 'Management' ? 'Manager' : userRole}
+          </h1>
+          <p className="text-gray-600">
+            Here's what's happening with your documents today.
+          </p>
         </div>
-        <div className="mt-4 lg:mt-0 flex space-x-3">
+        <div className="flex items-center space-x-4 mt-4 sm:mt-0">
           <button 
             onClick={handleCheckEmails}
             disabled={processingEmails}
             className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
           >
-            {processingEmails ? (
+            {processingEmails && (
               <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
             )}
             <span>{processingEmails ? 'Checking...' : 'Check Emails'}</span>
           </button>
@@ -209,10 +208,8 @@ const Dashboard = ({ userRole }) => {
             disabled={processingDocs}
             className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
           >
-            {processingDocs ? (
+            {processingDocs && (
               <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileText className="h-4 w-4" />
             )}
             <span>{processingDocs ? 'Processing...' : 'Process Docs'}</span>
           </button>
@@ -246,7 +243,7 @@ const Dashboard = ({ userRole }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Documents</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalDocuments.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{recentDocuments.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
               <FileText className="h-6 w-6 text-blue-600" />
@@ -284,7 +281,7 @@ const Dashboard = ({ userRole }) => {
             </div>
           </div>
           <div className="mt-4 flex items-center text-sm">
-            <span className="text-red-600">Need immediate action</span>
+            <span className="text-red-600">Action required</span>
           </div>
         </div>
 
@@ -319,9 +316,6 @@ const Dashboard = ({ userRole }) => {
                 >
                   <RefreshCw className={`h-4 w-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
                 </button>
-                <button className="p-2 hover:bg-gray-100 rounded-lg">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                </button>
                 <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                   View All
                 </button>
@@ -332,19 +326,19 @@ const Dashboard = ({ userRole }) => {
           {/* Loading State */}
           {loading && (
             <div className="p-8 text-center">
-              <RefreshCw className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+              <RefreshCw className="h-8 w-8 text-gray-400 mx-auto mb-4 animate-spin" />
               <p className="text-gray-600">Loading documents...</p>
             </div>
           )}
-          
+
           {/* Error State */}
           {error && (
             <div className="p-8 text-center">
-              <AlertTriangle className="h-8 w-8 text-red-600 mx-auto mb-4" />
+              <XCircle className="h-8 w-8 text-red-400 mx-auto mb-4" />
               <p className="text-red-600 mb-4">{error}</p>
               <button 
                 onClick={fetchRecentDocuments}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
               >
                 Retry
               </button>
@@ -387,8 +381,12 @@ const Dashboard = ({ userRole }) => {
                         <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
                           {doc.processed_at ? 'Processed' : 'Pending'}
                         </span>
-                        <button className="p-1 hover:bg-gray-100 rounded">
-                          <Eye className="h-4 w-4 text-gray-400" />
+                        <button 
+                          onClick={() => handleViewDocument(doc)}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          title="View Document Details"
+                        >
+                          <Eye className="h-4 w-4 text-gray-400 hover:text-gray-600" />
                         </button>
                         <button className="p-1 hover:bg-gray-100 rounded">
                           <Download className="h-4 w-4 text-gray-400" />
@@ -451,6 +449,115 @@ const Dashboard = ({ userRole }) => {
           </button>
         </div>
       </div>
+
+      {/* Document Details Modal */}
+      {showDocumentModal && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Document Details</h2>
+              <button
+                onClick={closeModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {/* Document Info */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <p className="text-lg font-medium text-gray-900">{selectedDocument.title || selectedDocument.filename}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                    <p className="text-gray-900">{selectedDocument.author || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <p className="text-gray-900">{selectedDocument.subject || 'Document'}</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
+                    <p className="text-gray-900">{new Date(selectedDocument.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Processed Date</label>
+                    <p className="text-gray-900">
+                      {selectedDocument.processed_at ? new Date(selectedDocument.processed_at).toLocaleDateString() : 'Not processed'}
+                    </p>
+                  </div>
+                </div>
+                
+                {selectedDocument.file_size && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">File Size</label>
+                      <p className="text-gray-900">{(selectedDocument.file_size / 1024).toFixed(2)} KB</p>
+                    </div>
+                    {selectedDocument.page_count && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Pages</label>
+                        <p className="text-gray-900">{selectedDocument.page_count}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Filename</label>
+                  <p className="text-gray-900 font-mono text-sm bg-gray-50 p-2 rounded">{selectedDocument.filename}</p>
+                </div>
+                
+                {/* Summary Section */}
+                {selectedDocument.summary && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">AI Generated Summary</label>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-gray-800 leading-relaxed">{selectedDocument.summary}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Status Badge */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Processing Status</label>
+                  <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                    selectedDocument.processed_at 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedDocument.processed_at ? 'Processed' : 'Pending Processing'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                <Download className="h-4 w-4" />
+                <span>Download</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
