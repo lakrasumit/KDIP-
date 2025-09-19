@@ -4,7 +4,7 @@ import threading
 from typing import List, Optional
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 
 from services.email_service import EmailService
@@ -305,11 +305,14 @@ def get_alerts():
         
         alerts = []
         today = datetime.now().date()
+        alert_id = 1
         
-        # Check for overdue documents
-        overdue_count = 0
-        due_today_count = 0
-        critical_unreviewed = 0
+        # Collect document-specific alerts
+        overdue_docs = []
+        due_today_docs = []
+        due_tomorrow_docs = []
+        critical_unreviewed_docs = []
+        urgent_unreviewed_docs = []
         
         for doc in metadata.values():
             # Due date alerts
@@ -318,57 +321,123 @@ def get_alerts():
                 try:
                     due_date = datetime.fromisoformat(due_date_str).date()
                     if due_date < today:
-                        overdue_count += 1
+                        overdue_docs.append(doc)
                     elif due_date == today:
-                        due_today_count += 1
+                        due_today_docs.append(doc)
+                    elif due_date == today + timedelta(days=1):
+                        due_tomorrow_docs.append(doc)
                 except ValueError:
                     continue
             
-            # Critical priority unreviewed documents
-            if (doc.get('priority', 'normal') == 'critical' and 
-                doc.get('review_status', 'not reviewed') == 'not reviewed'):
-                critical_unreviewed += 1
+            # Priority-based alerts
+            priority = doc.get('priority', 'normal')
+            review_status = doc.get('review_status', 'not reviewed')
+            
+            if priority == 'critical' and review_status == 'not reviewed':
+                critical_unreviewed_docs.append(doc)
+            elif priority == 'urgent' and review_status == 'not reviewed':
+                urgent_unreviewed_docs.append(doc)
         
-        # Generate alerts
-        if overdue_count > 0:
+        # Generate detailed alerts
+        
+        # Critical priority overdue documents (highest priority)
+        critical_overdue = [doc for doc in overdue_docs if doc.get('priority') == 'critical']
+        if critical_overdue:
+            for doc in critical_overdue:
+                alerts.append({
+                    "id": alert_id,
+                    "title": "CRITICAL: Overdue Document",
+                    "message": f"'{doc.get('title', doc.get('filename'))}' is overdue and marked as critical priority",
+                    "type": "critical",
+                    "time": "Overdue",
+                    "doc_id": doc.get('id'),
+                    "doc_title": doc.get('title', doc.get('filename')),
+                    "priority": "critical",
+                    "icon": "alert-triangle"
+                })
+                alert_id += 1
+        
+        # Overdue documents (general)
+        non_critical_overdue = [doc for doc in overdue_docs if doc.get('priority') != 'critical']
+        if non_critical_overdue:
             alerts.append({
-                "id": 1,
+                "id": alert_id,
                 "title": "Overdue Documents",
-                "message": f"{overdue_count} document(s) are past their due date",
+                "message": f"{len(non_critical_overdue)} document(s) are past their due date",
                 "type": "error",
-                "time": "Now",
-                "count": overdue_count
+                "time": "Overdue",
+                "count": len(non_critical_overdue),
+                "details": [{'title': doc.get('title', doc.get('filename')), 'id': doc.get('id')} for doc in non_critical_overdue[:3]],
+                "icon": "clock"
             })
+            alert_id += 1
         
-        if due_today_count > 0:
+        # Due today documents
+        if due_today_docs:
             alerts.append({
-                "id": 2,
+                "id": alert_id,
                 "title": "Due Today",
-                "message": f"{due_today_count} document(s) are due today",
+                "message": f"{len(due_today_docs)} document(s) are due today",
                 "type": "warning",
                 "time": "Today",
-                "count": due_today_count
+                "count": len(due_today_docs),
+                "details": [{'title': doc.get('title', doc.get('filename')), 'id': doc.get('id')} for doc in due_today_docs[:3]],
+                "icon": "calendar"
             })
+            alert_id += 1
         
-        if critical_unreviewed > 0:
+        # Due tomorrow documents
+        if due_tomorrow_docs:
             alerts.append({
-                "id": 3,
+                "id": alert_id,
+                "title": "Due Tomorrow",
+                "message": f"{len(due_tomorrow_docs)} document(s) are due tomorrow",
+                "type": "info",
+                "time": "Tomorrow",
+                "count": len(due_tomorrow_docs),
+                "details": [{'title': doc.get('title', doc.get('filename')), 'id': doc.get('id')} for doc in due_tomorrow_docs[:3]],
+                "icon": "calendar-clock"
+            })
+            alert_id += 1
+        
+        # Critical priority unreviewed documents
+        if critical_unreviewed_docs:
+            alerts.append({
+                "id": alert_id,
                 "title": "Critical Documents Pending Review",
-                "message": f"{critical_unreviewed} critical priority document(s) need review",
+                "message": f"{len(critical_unreviewed_docs)} critical priority document(s) need review",
                 "type": "warning",
                 "time": "Pending",
-                "count": critical_unreviewed
+                "count": len(critical_unreviewed_docs),
+                "details": [{'title': doc.get('title', doc.get('filename')), 'id': doc.get('id')} for doc in critical_unreviewed_docs[:3]],
+                "icon": "alert-circle"
             })
+            alert_id += 1
         
-        # Add general info alerts if no urgent alerts
+        # Urgent priority unreviewed documents
+        if urgent_unreviewed_docs:
+            alerts.append({
+                "id": alert_id,
+                "title": "Urgent Documents Pending Review",
+                "message": f"{len(urgent_unreviewed_docs)} urgent priority document(s) need review",
+                "type": "info",
+                "time": "Pending",
+                "count": len(urgent_unreviewed_docs),
+                "details": [{'title': doc.get('title', doc.get('filename')), 'id': doc.get('id')} for doc in urgent_unreviewed_docs[:3]],
+                "icon": "clock"
+            })
+            alert_id += 1
+        
+        # Add general info alert if no urgent alerts
         if len(alerts) == 0:
             alerts.append({
-                "id": 4,
+                "id": alert_id,
                 "title": "All Documents Up to Date",
                 "message": "No urgent actions required at this time",
-                "type": "info",
+                "type": "success",
                 "time": "Current status",
-                "count": 0
+                "count": 0,
+                "icon": "check-circle"
             })
         
         return jsonify(alerts)

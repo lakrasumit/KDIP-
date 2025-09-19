@@ -728,26 +728,194 @@ const Dashboard = ({ userRole }) => {
         {/* Alerts & Notifications */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Alerts & Notifications</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Alerts & Notifications</h2>
+              <button 
+                onClick={fetchAlerts}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Refresh Alerts"
+              >
+                <RefreshCw className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
           </div>
-          <div className="p-6 space-y-4">
-            {alerts.map((alert) => (
-              <div key={alert.id} className="flex items-start space-x-3">
-                <div className={`w-2 h-2 rounded-full mt-2 ${
-                  alert.type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-                }`}></div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-medium text-gray-900">{alert.title}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
-                  <p className="text-xs text-gray-500 mt-2">{alert.time}</p>
-                </div>
+          <div className="max-h-96 overflow-y-auto">
+            {alerts.length === 0 ? (
+              <div className="p-6 text-center">
+                <CheckCircle className="h-8 w-8 text-green-400 mx-auto mb-2" />
+                <p className="text-gray-600">Loading alerts...</p>
               </div>
-            ))}
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {alerts.map((alert) => {
+                  // Helper function to get alert styling
+                  const getAlertStyling = (type) => {
+                    switch (type) {
+                      case 'critical':
+                        return {
+                          bg: 'bg-red-50 border-l-4 border-l-red-500',
+                          dot: 'bg-red-500',
+                          icon: 'text-red-600',
+                          title: 'text-red-900',
+                          text: 'text-red-700'
+                        };
+                      case 'error':
+                        return {
+                          bg: 'bg-red-50 border-l-4 border-l-red-400',
+                          dot: 'bg-red-400',
+                          icon: 'text-red-500',
+                          title: 'text-red-800',
+                          text: 'text-red-600'
+                        };
+                      case 'warning':
+                        return {
+                          bg: 'bg-yellow-50 border-l-4 border-l-yellow-400',
+                          dot: 'bg-yellow-400',
+                          icon: 'text-yellow-600',
+                          title: 'text-yellow-800',
+                          text: 'text-yellow-700'
+                        };
+                      case 'info':
+                        return {
+                          bg: 'bg-blue-50 border-l-4 border-l-blue-400',
+                          dot: 'bg-blue-400',
+                          icon: 'text-blue-600',
+                          title: 'text-blue-800',
+                          text: 'text-blue-700'
+                        };
+                      case 'success':
+                        return {
+                          bg: 'bg-green-50 border-l-4 border-l-green-400',
+                          dot: 'bg-green-400',
+                          icon: 'text-green-600',
+                          title: 'text-green-800',
+                          text: 'text-green-700'
+                        };
+                      default:
+                        return {
+                          bg: 'bg-gray-50 border-l-4 border-l-gray-400',
+                          dot: 'bg-gray-400',
+                          icon: 'text-gray-600',
+                          title: 'text-gray-800',
+                          text: 'text-gray-700'
+                        };
+                    }
+                  };
+
+                  // Helper function to get alert icon
+                  const getAlertIcon = (iconName, styling) => {
+                    const iconClass = `h-5 w-5 ${styling.icon}`;
+                    switch (iconName) {
+                      case 'alert-triangle':
+                        return <AlertTriangle className={iconClass} />;
+                      case 'clock':
+                        return <Clock className={iconClass} />;
+                      case 'calendar':
+                        return <Calendar className={iconClass} />;
+                      case 'calendar-clock':
+                        return <Calendar className={iconClass} />;
+                      case 'alert-circle':
+                        return <AlertTriangle className={iconClass} />;
+                      case 'check-circle':
+                        return <CheckCircle className={iconClass} />;
+                      default:
+                        return <AlertTriangle className={iconClass} />;
+                    }
+                  };
+
+                  const styling = getAlertStyling(alert.type);
+
+                  return (
+                    <div key={alert.id} className={`p-4 ${styling.bg} hover:shadow-sm transition-shadow`}>
+                      <div className="flex items-start space-x-3">
+                        <div className={`w-3 h-3 rounded-full mt-1.5 ${styling.dot} ${alert.type === 'critical' ? 'animate-pulse' : ''}`}></div>
+                        {alert.icon && (
+                          <div className="mt-0.5">
+                            {getAlertIcon(alert.icon, styling)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <h4 className={`text-sm font-semibold ${styling.title} ${alert.type === 'critical' ? 'font-bold' : ''}`}>
+                              {alert.title}
+                            </h4>
+                            {alert.count && alert.count > 0 && (
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${styling.dot.replace('bg-', 'bg-').replace('bg-red-500', 'bg-red-100 text-red-800').replace('bg-yellow-400', 'bg-yellow-100 text-yellow-800').replace('bg-blue-400', 'bg-blue-100 text-blue-800').replace('bg-green-400', 'bg-green-100 text-green-800')}`}>
+                                {alert.count}
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-sm ${styling.text} mt-1`}>{alert.message}</p>
+                          
+                          {/* Show document details if available */}
+                          {alert.details && alert.details.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {alert.details.map((doc, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => {
+                                    const fullDoc = recentDocuments.find(d => d.id === doc.id);
+                                    if (fullDoc) handleViewDocument(fullDoc);
+                                  }}
+                                  className={`block text-xs ${styling.text} hover:underline text-left truncate max-w-full`}
+                                >
+                                  • {doc.title}
+                                </button>
+                              ))}
+                              {alert.count > alert.details.length && (
+                                <p className={`text-xs ${styling.text} italic`}>
+                                  ...and {alert.count - alert.details.length} more
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Single document alert */}
+                          {alert.doc_id && (
+                            <button
+                              onClick={() => {
+                                const fullDoc = recentDocuments.find(d => d.id === alert.doc_id);
+                                if (fullDoc) handleViewDocument(fullDoc);
+                              }}
+                              className={`mt-2 text-xs ${styling.text} hover:underline block`}
+                            >
+                              Click to view document →
+                            </button>
+                          )}
+                          
+                          <div className="flex items-center justify-between mt-2">
+                            <p className={`text-xs ${styling.text.replace('text-', 'text-').split('-')[0]}-500`}>{alert.time}</p>
+                            {alert.type === 'critical' && (
+                              <span className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded">
+                                URGENT ACTION REQUIRED
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="p-6 border-t border-gray-200">
-            <button className="w-full text-center text-blue-600 hover:text-blue-700 text-sm font-medium">
-              View All Notifications
-            </button>
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={() => {
+                  fetchAlerts();
+                  fetchStats();
+                  fetchRecentDocuments();
+                }}
+                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Refresh All Data</span>
+              </button>
+              <button className="text-gray-600 hover:text-gray-700 text-sm font-medium">
+                View All Notifications
+              </button>
+            </div>
           </div>
         </div>
       </div>

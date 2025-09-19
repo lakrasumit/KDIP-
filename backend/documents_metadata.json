@@ -12,8 +12,8 @@
     "file_size": 766544,
     "page_count": 9,
     "review_status": "not reviewed",
-    "priority": "normal",
-    "due_date": null
+    "priority": "critical",
+    "due_date": "2025-09-18"
   },
   "doc_29f6164d": {
     "id": "doc_29f6164d",
@@ -45,7 +45,7 @@
     "page_count": 1,
     "review_status": "reviewed",
     "priority": "urgent",
-    "due_date": null
+    "due_date": "2025-09-19"
   },
   "doc_d1c341e4": {
     "id": "doc_d1c341e4",
