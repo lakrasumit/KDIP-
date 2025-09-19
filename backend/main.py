@@ -376,6 +376,117 @@ def get_alerts():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/documents/<doc_id>/review", methods=["PUT"])
+def update_document_review_status(doc_id):
+    """Update document review status"""
+    try:
+        data = request.get_json()
+        if not data or 'review_status' not in data:
+            return jsonify({"error": "Review status is required"}), 400
+            
+        review_status = data['review_status']
+        if review_status not in ['reviewed', 'not reviewed']:
+            return jsonify({"error": "Invalid review status. Must be 'reviewed' or 'not reviewed'"}), 400
+        
+        # Load metadata
+        metadata_file = "documents_metadata.json"
+        if not os.path.exists(metadata_file):
+            return jsonify({"error": "No documents found"}), 404
+            
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        
+        if doc_id not in metadata:
+            return jsonify({"error": "Document not found"}), 404
+        
+        # Update review status
+        metadata[doc_id]['review_status'] = review_status
+        
+        # Save updated metadata
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=2, default=str)
+            
+        return jsonify({"message": "Review status updated successfully", "review_status": review_status})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/documents/<doc_id>/priority", methods=["PUT"])
+def update_document_priority(doc_id):
+    """Update document priority"""
+    try:
+        data = request.get_json()
+        if not data or 'priority' not in data:
+            return jsonify({"error": "Priority is required"}), 400
+            
+        priority = data['priority']
+        if priority not in ['critical', 'urgent', 'normal']:
+            return jsonify({"error": "Invalid priority. Must be 'critical', 'urgent', or 'normal'"}), 400
+        
+        # Load metadata
+        metadata_file = "documents_metadata.json"
+        if not os.path.exists(metadata_file):
+            return jsonify({"error": "No documents found"}), 404
+            
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        
+        if doc_id not in metadata:
+            return jsonify({"error": "Document not found"}), 404
+        
+        # Update priority
+        metadata[doc_id]['priority'] = priority
+        
+        # Save updated metadata
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=2, default=str)
+            
+        return jsonify({"message": "Priority updated successfully", "priority": priority})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/documents/<doc_id>/due-date", methods=["PUT"])
+def update_document_due_date(doc_id):
+    """Update document due date"""
+    try:
+        data = request.get_json()
+        if not data or 'due_date' not in data:
+            return jsonify({"error": "Due date is required"}), 400
+            
+        due_date = data['due_date']
+        
+        # Validate due date format if not None
+        if due_date is not None:
+            try:
+                # Parse the date to ensure it's valid
+                datetime.fromisoformat(due_date)
+            except ValueError:
+                return jsonify({"error": "Invalid date format. Use YYYY-MM-DD"}), 400
+        
+        # Load metadata
+        metadata_file = "documents_metadata.json"
+        if not os.path.exists(metadata_file):
+            return jsonify({"error": "No documents found"}), 404
+            
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        
+        if doc_id not in metadata:
+            return jsonify({"error": "Document not found"}), 404
+        
+        # Update due date
+        metadata[doc_id]['due_date'] = due_date
+        
+        # Save updated metadata
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=2, default=str)
+            
+        return jsonify({"message": "Due date updated successfully", "due_date": due_date})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     # Ensure required directories exist
     os.makedirs("pdf_files", exist_ok=True)

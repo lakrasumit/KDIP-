@@ -43,8 +43,24 @@
     "processed_at": "2025-09-19T20:58:02.633265",
     "file_size": 224670,
     "page_count": 1,
-    "review_status": "not reviewed",
-    "priority": "normal",
+    "review_status": "reviewed",
+    "priority": "urgent",
     "due_date": null
+  },
+  "doc_d1c341e4": {
+    "id": "doc_d1c341e4",
+    "filename": "Benefits of Drinking More Water.pdf",
+    "title": "Benefits Of Drinking More Water",
+    "author": "Unknown",
+    "subject": "Document",
+    "summary": "Jatin Kumar's blog post details numerous health benefits of increased water intake.  These include improved energy levels, skin health, digestion, weight management, and detoxification, as well as enhanced brain function, regulated body temperature, and better heart and joint health.  The author concludes that consistent hydration is a simple yet highly effective way to improve overall well-being.",
+    "file_path": "pdf_files\\Benefits of Drinking More Water.pdf",
+    "created_at": "2025-09-19T22:50:14.138804",
+    "processed_at": "2025-09-19T22:50:14.138804",
+    "file_size": 250879,
+    "page_count": 3,
+    "review_status": "reviewed",
+    "priority": "critical",
+    "due_date": "2025-09-26"
   }
 }

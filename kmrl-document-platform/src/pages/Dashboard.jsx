@@ -538,12 +538,170 @@ const Dashboard = ({ userRole }) => {
                           <p className="text-sm text-gray-600 mt-2 line-clamp-2">
                             {doc.summary.substring(0, 150)}...
                           </p>
-                        )}
+                        )}                        
+                        
+                        {/* Enhanced Status and Priority Section */}
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                          {/* Review Status Badge */}
+                          <div className="flex items-center space-x-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              getReviewStatusColor(doc.review_status || 'not reviewed')
+                            }`}>
+                              {doc.review_status === 'reviewed' ? '✓ Reviewed' : '○ Not Reviewed'}
+                            </span>
+                            
+                            {/* Review Status Dropdown */}
+                            <div className="relative group">
+                              <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                <span className="text-xs text-gray-400">⋮</span>
+                              </button>
+                              <div className="absolute left-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                <button 
+                                  onClick={() => updateReviewStatus(doc.id, 'reviewed')}
+                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-green-600"
+                                >
+                                  ✓ Mark as Reviewed
+                                </button>
+                                <button 
+                                  onClick={() => updateReviewStatus(doc.id, 'not reviewed')}
+                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-600"
+                                >
+                                  ○ Mark as Not Reviewed
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Priority Badge */}
+                          <div className="flex items-center space-x-1">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${
+                              getPriorityColor(doc.priority || 'normal')
+                            }`}>
+                              {doc.priority === 'critical' && <AlertTriangle className="h-3 w-3" />}
+                              {doc.priority === 'urgent' && <Clock className="h-3 w-3" />}
+                              {doc.priority === 'normal' && <CheckCircle className="h-3 w-3" />}
+                              <span className="capitalize">{doc.priority || 'normal'}</span>
+                            </span>
+                            
+                            {/* Priority Dropdown */}
+                            <div className="relative group">
+                              <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                <span className="text-xs text-gray-400">⋮</span>
+                              </button>
+                              <div className="absolute left-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                <button 
+                                  onClick={() => updatePriority(doc.id, 'critical')}
+                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-600 flex items-center space-x-2"
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  <span>Critical</span>
+                                </button>
+                                <button 
+                                  onClick={() => updatePriority(doc.id, 'urgent')}
+                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-yellow-600 flex items-center space-x-2"
+                                >
+                                  <Clock className="h-3 w-3" />
+                                  <span>Urgent</span>
+                                </button>
+                                <button 
+                                  onClick={() => updatePriority(doc.id, 'normal')}
+                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-green-600 flex items-center space-x-2"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>Normal</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Due Date Badge */}
+                          {doc.due_date ? (
+                            <div className="flex items-center space-x-1">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${
+                                formatDueDate(doc.due_date)?.color || 'text-gray-600 bg-gray-100'
+                              }`}>
+                                <Calendar className="h-3 w-3" />
+                                <span>{formatDueDate(doc.due_date)?.text}</span>
+                              </span>
+                              
+                              {/* Due Date Dropdown */}
+                              <div className="relative group">
+                                <button className="p-1 hover:bg-gray-100 rounded transition-colors">
+                                  <span className="text-xs text-gray-400">⋮</span>
+                                </button>
+                                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                  <div className="p-3">
+                                    <label className="block text-xs font-medium text-gray-700 mb-2">Update Due Date</label>
+                                    <input 
+                                      type="date"
+                                      min={getTodayDate()}
+                                      defaultValue={doc.due_date}
+                                      onChange={(e) => updateDueDate(doc.id, e.target.value)}
+                                      className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                    <div className="mt-2 space-y-1">
+                                      {getSuggestedDates().map((suggestion) => (
+                                        <button
+                                          key={suggestion.label}
+                                          onClick={() => updateDueDate(doc.id, suggestion.date)}
+                                          className="block w-full text-left px-2 py-1 text-xs hover:bg-gray-50 rounded"
+                                        >
+                                          {suggestion.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t border-gray-200">
+                                      <button 
+                                        onClick={() => updateDueDate(doc.id, null)}
+                                        className="block w-full text-left px-2 py-1 text-xs hover:bg-gray-50 rounded text-red-600"
+                                      >
+                                        Remove Due Date
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="relative group">
+                              <button className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors flex items-center space-x-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>Set Due Date</span>
+                              </button>
+                              
+                              {/* Add Due Date Dropdown */}
+                              <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                <div className="p-3">
+                                  <label className="block text-xs font-medium text-gray-700 mb-2">Set Due Date</label>
+                                  <input 
+                                    type="date"
+                                    min={getTodayDate()}
+                                    onChange={(e) => updateDueDate(doc.id, e.target.value)}
+                                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  />
+                                  <div className="mt-2 space-y-1">
+                                    {getSuggestedDates().map((suggestion) => (
+                                      <button
+                                        key={suggestion.label}
+                                        onClick={() => updateDueDate(doc.id, suggestion.date)}
+                                        className="block w-full text-left px-2 py-1 text-xs hover:bg-gray-50 rounded"
+                                      >
+                                        {suggestion.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Processed Status Badge (original) */}
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
+                            {doc.processed_at ? 'Processed' : 'Pending'}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center space-x-2 ml-4">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
-                          {doc.processed_at ? 'Processed' : 'Pending'}
-                        </span>
                         <button 
                           onClick={() => handleViewDocument(doc)}
                           className="p-1 hover:bg-gray-100 rounded transition-colors"
