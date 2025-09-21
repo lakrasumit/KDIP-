@@ -86,8 +86,7 @@ class EmailService:
                 continue
             
             filename = part.get_filename()
-            if filename and filename.lower().endswith('.pdf'):
-                # Generate unique filename if file already exists
+            if filename and (filename.lower().endswith('.pdf') or (filename.lower().endswith('.jpg') or (filename.lower().endswith('.jpeg')) or (filename.lower().endswith('.png')))):
                 filepath = self._get_unique_filepath(filename)
                 
                 try:
