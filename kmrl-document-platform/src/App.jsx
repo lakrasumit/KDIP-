@@ -6,6 +6,11 @@ import Dashboard from './pages/Dashboard';
 import DocumentHub from './pages/DocumentHub';
 import KnowledgeSearch from './pages/KnowledgeSearch';
 import ComplianceTracker from './pages/ComplianceTracker';
+import EngineeringDashboard from './pages/EngineeringDashboard';
+import HRDashboard from './pages/HRDashboard';
+import OperationsDashboard from './pages/OperationsDashboard';
+import FinanceDashboard from './pages/FinanceDashboard';
+import ManagementDashboard from './pages/ManagementDashboard';
 import { useState } from 'react';
 
 function App() {
@@ -35,6 +40,11 @@ function App() {
           <Route path="/documents" element={<DocumentHub userRole={userRole} />} />
           <Route path="/search" element={<KnowledgeSearch userRole={userRole} />} />
           <Route path="/compliance" element={<ComplianceTracker userRole={userRole} />} />
+          <Route path="/departments/engineering" element={<EngineeringDashboard userRole={userRole} />} />
+          <Route path="/departments/hr" element={<HRDashboard userRole={userRole} />} />
+          <Route path="/departments/operations" element={<OperationsDashboard userRole={userRole} />} />
+          <Route path="/departments/finance" element={<FinanceDashboard userRole={userRole} />} />
+          <Route path="/departments/management" element={<ManagementDashboard userRole={userRole} />} />
         </Routes>
       </Layout>
     </Router>

@@ -1,0 +1,20 @@
+{
+  "doc_bb9cebd6": {
+    "id": "doc_bb9cebd6",
+    "filename": "SAMPLE_Filled_Leave_Application_Kochi_Metro.pdf",
+    "title": "Sample Filled Leave Application Kochi Metro",
+    "author": "Unknown",
+    "subject": "Document",
+    "summary": "This document covers Sample, Filled, Leave and related topics.",
+    "file_path": "pdf_files\\SAMPLE_Filled_Leave_Application_Kochi_Metro.pdf",
+    "created_at": "2025-09-21T07:25:24.667323",
+    "processed_at": "2025-09-21T07:25:24.667323",
+    "file_size": 2622,
+    "page_count": 1,
+    "review_status": "not reviewed",
+    "priority": "normal",
+    "due_date": null,
+    "department": "human_resources",
+    "access_level": "departmental"
+  }
+}

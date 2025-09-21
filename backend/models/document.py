@@ -8,7 +8,8 @@ class Document:
                  subject: Optional[str] = None, summary: Optional[str] = None,
                  processed_at: Optional[Union[datetime, str]] = None, file_size: Optional[int] = None,
                  page_count: Optional[int] = None, review_status: Optional[str] = "not reviewed",
-                 priority: Optional[str] = "normal", due_date: Optional[str] = None):
+                 priority: Optional[str] = "normal", due_date: Optional[str] = None,
+                 department: Optional[str] = None, access_level: Optional[str] = "general"):
         self.id = id
         self.filename = filename
         self.title = title
@@ -33,6 +34,8 @@ class Document:
         self.review_status = review_status
         self.priority = priority
         self.due_date = due_date
+        self.department = department
+        self.access_level = access_level
     
     def to_dict(self):
         return {
@@ -49,7 +52,9 @@ class Document:
             'page_count': self.page_count,
             'review_status': self.review_status,
             'priority': self.priority,
-            'due_date': self.due_date
+            'due_date': self.due_date,
+            'department': self.department,
+            'access_level': self.access_level
         }
 
 class DocumentSchema(Schema):
@@ -67,6 +72,8 @@ class DocumentSchema(Schema):
     review_status = fields.Str(allow_none=True)
     priority = fields.Str(allow_none=True)
     due_date = fields.Str(allow_none=True)
+    department = fields.Str(allow_none=True)
+    access_level = fields.Str(allow_none=True)
 
 class DocumentCreateSchema(Schema):
     filename = fields.Str(required=True)

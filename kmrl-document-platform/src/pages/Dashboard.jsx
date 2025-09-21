@@ -26,6 +26,8 @@ const Dashboard = ({ userRole }) => {
   const [processingDocs, setProcessingDocs] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [availableDepartments, setAvailableDepartments] = useState([]);
   const [stats, setStats] = useState({
     total_documents: 0,
     pending_reviews: 0,
@@ -41,7 +43,22 @@ const Dashboard = ({ userRole }) => {
   const fetchRecentDocuments = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/documents/recent`);
+      let url = `${API_BASE_URL}/documents/recent`;
+      
+      // Add query parameters for role and department filtering
+      const params = new URLSearchParams();
+      if (userRole) {
+        params.append('role', userRole.toLowerCase());
+      }
+      if (selectedDepartment && selectedDepartment !== 'all') {
+        params.append('department', selectedDepartment);
+      }
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch documents');
@@ -55,6 +72,50 @@ const Dashboard = ({ userRole }) => {
       setError('Failed to load recent documents');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Fetch documents by department
+  const fetchDocumentsByDepartment = async (department) => {
+    try {
+      setLoading(true);
+      let url = `${API_BASE_URL}/documents/department/${department}`;
+      
+      // Add role parameter if available
+      if (userRole) {
+        url += `?role=${userRole.toLowerCase()}`;
+      }
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch department documents');
+      }
+      
+      const documents = await response.json();
+      setRecentDocuments(documents);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching department documents:', err);
+      setError('Failed to load department documents');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch available departments
+  const fetchDepartments = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/departments`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch departments');
+      }
+      
+      const data = await response.json();
+      setAvailableDepartments(data.departments || []);
+    } catch (err) {
+      console.error('Error fetching departments:', err);
     }
   };
 
@@ -334,7 +395,22 @@ const Dashboard = ({ userRole }) => {
     fetchRecentDocuments();
     fetchStats();
     fetchAlerts();
+    fetchDepartments();
   }, []);
+  
+  // Re-fetch documents when department changes
+  useEffect(() => {
+    if (selectedDepartment === 'all') {
+      fetchRecentDocuments();
+    } else {
+      fetchDocumentsByDepartment(selectedDepartment);
+    }
+  }, [selectedDepartment]);
+  
+  // Handle department change
+  const handleDepartmentChange = (department) => {
+    setSelectedDepartment(department);
+  };
 
   // Refresh all data after document updates
   const refreshAllData = () => {
@@ -383,20 +459,40 @@ const Dashboard = ({ userRole }) => {
         </div>
       </div>
 
-      {/* Quick Search */}
+      {/* Quick Search and Department Filter */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search documents, policies, or circulars..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm transition-colors">
-            Search
-          </button>
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              placeholder="Search documents, policies, or circulars..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-sm transition-colors">
+              Search
+            </button>
+          </div>
+          
+          {/* Department Filter */}
+          <div className="flex items-center space-x-2">
+            <Filter className="h-5 w-5 text-gray-400" />
+            <select
+              value={selectedDepartment}
+              onChange={(e) => handleDepartmentChange(e.target.value)}
+              className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[150px]"
+            >
+              <option value="all">All Departments</option>
+              {availableDepartments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -699,6 +795,30 @@ const Dashboard = ({ userRole }) => {
                           <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
                             {doc.processed_at ? 'Processed' : 'Pending'}
                           </span>
+                          
+                          {/* Department Badge */}
+                          {doc.department && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-600 flex items-center space-x-1">
+                              <Users className="h-3 w-3" />
+                              <span>{doc.department.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                            </span>
+                          )}
+                          
+                          {/* Access Level Badge */}
+                          {doc.access_level && (
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              doc.access_level === 'restricted' ? 'bg-red-100 text-red-600' :
+                              doc.access_level === 'confidential' ? 'bg-orange-100 text-orange-600' :
+                              doc.access_level === 'departmental' ? 'bg-yellow-100 text-yellow-600' :
+                              'bg-green-100 text-green-600'
+                            }`}>
+                              {doc.access_level === 'restricted' && '🔒'}
+                              {doc.access_level === 'confidential' && '🔐'}
+                              {doc.access_level === 'departmental' && '👥'}
+                              {doc.access_level === 'general' && '🌐'}
+                              <span className="ml-1 capitalize">{doc.access_level}</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center space-x-2 ml-4">

@@ -30,10 +30,14 @@ def root():
 def get_recent_documents():
     """Get list of recent documents with summaries"""
     try:
+        # Get optional query parameters
+        user_role = request.args.get('role')
+        department = request.args.get('department')
+        
         # Since we're converting from async, we need to handle this differently
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        documents = loop.run_until_complete(document_service.get_recent_documents())
+        documents = loop.run_until_complete(document_service.get_recent_documents(user_role, department))
         loop.close()
         
         # Convert Document objects to dictionaries
@@ -184,6 +188,83 @@ def upload_document():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route("/api/documents/department/<department>", methods=["GET"])
+def get_documents_by_department(department):
+    """Get documents filtered by department"""
+    try:
+        user_role = request.args.get('role')
+        
+        # Get available departments
+        available_departments = document_service.get_available_departments()
+        if department not in available_departments:
+            return jsonify({"error": f"Invalid department. Available: {available_departments}"}), 400
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        documents = loop.run_until_complete(document_service.get_documents_by_department(department, user_role))
+        loop.close()
+        
+        # Convert Document objects to dictionaries
+        documents_dict = [doc.to_dict() if hasattr(doc, 'to_dict') else doc for doc in documents]
+        return jsonify(documents_dict)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/departments", methods=["GET"])
+def get_departments():
+    """Get list of available departments"""
+    try:
+        departments = document_service.get_available_departments()
+        return jsonify({"departments": departments})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/documents/<doc_id>/review", methods=["PUT"])
+def update_document_review_status(doc_id):
+    """Update document review status"""
+    try:
+        data = request.get_json()
+        if not data or 'review_status' not in data:
+            return jsonify({"error": "review_status is required"}), 400
+        
+        review_status = data['review_status']
+        if review_status not in ['reviewed', 'not reviewed']:
+            return jsonify({"error": "Invalid review status"}), 400
+        
+        # Load metadata
+        metadata_file = "documents_metadata.json"
+        if not os.path.exists(metadata_file):
+            return jsonify({"error": "No documents found"}), 404
+        
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            metadata = json.load(f)
+        
+        if doc_id not in metadata:
+            return jsonify({"error": "Document not found"}), 404
+        
+        # Update review status
+        metadata[doc_id]['review_status'] = review_status
+        
+        # Save metadata
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            json.dump(metadata, f, indent=2, default=str)
+        
+        # Update department-specific files
+        department = metadata[doc_id].get('department')
+        if department:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(document_service._update_department_document(department, doc_id, metadata[doc_id]))
+            loop.close()
+        
+        return jsonify({"message": "Review status updated successfully"})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route("/api/search", methods=["GET"])
 def search_documents():
@@ -445,41 +526,6 @@ def get_alerts():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/documents/<doc_id>/review", methods=["PUT"])
-def update_document_review_status(doc_id):
-    """Update document review status"""
-    try:
-        data = request.get_json()
-        if not data or 'review_status' not in data:
-            return jsonify({"error": "Review status is required"}), 400
-            
-        review_status = data['review_status']
-        if review_status not in ['reviewed', 'not reviewed']:
-            return jsonify({"error": "Invalid review status. Must be 'reviewed' or 'not reviewed'"}), 400
-        
-        # Load metadata
-        metadata_file = "documents_metadata.json"
-        if not os.path.exists(metadata_file):
-            return jsonify({"error": "No documents found"}), 404
-            
-        with open(metadata_file, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
-        
-        if doc_id not in metadata:
-            return jsonify({"error": "Document not found"}), 404
-        
-        # Update review status
-        metadata[doc_id]['review_status'] = review_status
-        
-        # Save updated metadata
-        with open(metadata_file, 'w', encoding='utf-8') as f:
-            json.dump(metadata, f, indent=2, default=str)
-            
-        return jsonify({"message": "Review status updated successfully", "review_status": review_status})
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route("/api/documents/<doc_id>/priority", methods=["PUT"])
 def update_document_priority(doc_id):
     """Update document priority"""
@@ -509,6 +555,14 @@ def update_document_priority(doc_id):
         # Save updated metadata
         with open(metadata_file, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=2, default=str)
+        
+        # Update department-specific files
+        department = metadata[doc_id].get('department')
+        if department:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(document_service._update_department_document(department, doc_id, metadata[doc_id]))
+            loop.close()
             
         return jsonify({"message": "Priority updated successfully", "priority": priority})
         
@@ -550,11 +604,21 @@ def update_document_due_date(doc_id):
         # Save updated metadata
         with open(metadata_file, 'w', encoding='utf-8') as f:
             json.dump(metadata, f, indent=2, default=str)
+        
+        # Update department-specific files
+        department = metadata[doc_id].get('department')
+        if department:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(document_service._update_department_document(department, doc_id, metadata[doc_id]))
+            loop.close()
             
         return jsonify({"message": "Due date updated successfully", "due_date": due_date})
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == "__main__":
     # Ensure required directories exist

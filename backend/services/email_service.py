@@ -34,7 +34,7 @@ class EmailService:
     
     def _download_pdf_attachments(self) -> List[str]:
         """Download PDF attachments from new emails"""
-        downloaded_files = []
+        downloaded_files = []   
         
         try:
             # Connect to Gmail IMAP

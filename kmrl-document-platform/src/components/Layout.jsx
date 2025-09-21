@@ -10,12 +10,20 @@ import {
   LogOut,
   Bell,
   User,
-  Globe
+  Globe,
+  Wrench,
+  Settings,
+  DollarSign,
+  Heart,
+  Crown,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const Layout = ({ children, userRole, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [language, setLanguage] = useState('en');
+  const [departmentsOpen, setDepartmentsOpen] = useState(true);
   const location = useLocation();
 
   const roleColors = {
@@ -28,7 +36,7 @@ const Layout = ({ children, userRole, onLogout }) => {
 
   const navigation = [
     {
-      name: language === 'en' ? 'Dashboard' : 'ഡാഷ്ബോർഡ്',
+      name: language === 'en' ? 'Main Dashboard' : 'പ്രധാന ഡാഷ്ബോർഡ്',
       href: '/dashboard',
       icon: LayoutDashboard,
       roles: ['Engineering', 'Operations', 'Finance', 'HR', 'Management']
@@ -53,7 +61,54 @@ const Layout = ({ children, userRole, onLogout }) => {
     }
   ];
 
+  const departmentNavigation = [
+    {
+      name: language === 'en' ? 'Engineering' : 'എഞ്ചിനീയറിംഗ്',
+      href: '/departments/engineering',
+      icon: Wrench,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
+      roles: ['Engineering', 'Management']
+    },
+    {
+      name: language === 'en' ? 'Human Resources' : 'ഹ്യൂമൻ റിസോഴ്സ്',
+      href: '/departments/hr',
+      icon: Heart,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-100',
+      roles: ['HR', 'Management']
+    },
+    {
+      name: language === 'en' ? 'Operations' : 'ഓപ്പറേഷൻസ്',
+      href: '/departments/operations',
+      icon: Settings,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
+      roles: ['Operations', 'Management']
+    },
+    {
+      name: language === 'en' ? 'Finance' : 'ഫിനാൻസ്',
+      href: '/departments/finance',
+      icon: DollarSign,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+      roles: ['Finance', 'Management']
+    },
+    {
+      name: language === 'en' ? 'Management' : 'മാനേജ്മെന്റ്',
+      href: '/departments/management',
+      icon: Crown,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
+      roles: ['Management']
+    }
+  ];
+
   const filteredNavigation = navigation.filter(item => 
+    item.roles.includes(userRole)
+  );
+
+  const filteredDepartmentNavigation = departmentNavigation.filter(item => 
     item.roles.includes(userRole)
   );
 
@@ -85,28 +140,74 @@ const Layout = ({ children, userRole, onLogout }) => {
         </div>
 
         <nav className="flex-1 mt-8 px-4 overflow-y-auto">
-          <div className="space-y-2">
-            {filteredNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    isActive
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                  }`}
-                >
-                  <item.icon
-                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+          <div className="space-y-4">
+            {/* Main Navigation */}
+            <div className="space-y-2">
+              {filteredNavigation.map((item) => {
+                const isActive = location.pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isActive
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                     }`}
-                  />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
+                  >
+                    <item.icon
+                      className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                        isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                      }`}
+                    />
+                    <span className="truncate">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Department Dashboards */}
+            {filteredDepartmentNavigation.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setDepartmentsOpen(!departmentsOpen)}
+                  className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <span>{language === 'en' ? 'Department Dashboards' : 'വകുപ്പ് ഡാഷ്ബോർഡുകൾ'}</span>
+                  {departmentsOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </button>
+                
+                {departmentsOpen && (
+                  <div className="mt-2 space-y-1 pl-3">
+                    {filteredDepartmentNavigation.map((item) => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                            isActive
+                              ? `${item.bgColor} ${item.color}`
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          }`}
+                        >
+                          <item.icon
+                            className={`mr-3 h-4 w-4 flex-shrink-0 ${
+                              isActive ? item.color : 'text-gray-400 group-hover:text-gray-500'
+                            }`}
+                          />
+                          <span className="truncate">{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </nav>
 
